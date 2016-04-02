@@ -1,13 +1,13 @@
 {
-	"name"        :  "geoip-lite-country",
+	"name"        :  "geoip-country-lite",
 	"version"     :  "1.0.0",
 	"description" :  "A fork of GeoIP-lite, a light-weight, native JavaScript implementation of GeoIP API from MaxMind that only supports country data.",
 	"keywords"    :  ["geo", "geoip", "ip", "ipv4", "ipv6", "geolookup", "maxmind", "geolite", "country"],
-	"homepage"    :  "https://github.com/carlosrymer/node-geoip-country",
+	"homepage"    :  "https://github.com/carlosrymer/geoip-country-lite",
 	"author"      :  "Carlos Rymer",
 	"files"       :  ["lib/", "data/", "test/","scripts/"],
 	"main"        :  "lib/geoip.js",
-	"repository"  :  { "type": "git", "url": "git://github.com/carlosrymer/node-geoip-country.git" },
+	"repository"  :  { "type": "git", "url": "git://github.com/carlosrymer/geoip-country-lite.git" },
 	"engines"     :  { "node": ">=0.6.3" },
 	"scripts": {
 		"test": "nodeunit --reporter=minimal test/tests.js",
