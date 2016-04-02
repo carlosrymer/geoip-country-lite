@@ -30,34 +30,14 @@ var tmpPath = path.join(__dirname, '..', 'tmp');
 
 var databases = [
 	{
-		type: 'country',
 		url: 'https://geolite.maxmind.com/download/geoip/database/GeoIPCountryCSV.zip',
 		src: 'GeoIPCountryWhois.csv',
 		dest: 'geoip-country.dat'
 	},
 	{
-		type: 'country',
 		url: 'https://geolite.maxmind.com/download/geoip/database/GeoIPv6.csv.gz',
 		src: 'GeoIPv6.csv',
 		dest: 'geoip-country6.dat'
-	},
-	{
-		type: 'city-extended',
-		url: 'https://geolite.maxmind.com/download/geoip/database/GeoLiteCity_CSV/GeoLiteCity-latest.zip',
-		src: [
-			'GeoLiteCity-Blocks.csv',
-			'GeoLiteCity-Location.csv'
-		],
-		dest: [
-			'geoip-city.dat',
-			'geoip-city-names.dat'
-		]
-	},
-	{
-		type: 'city',
-		url: 'https://geolite.maxmind.com/download/geoip/database/GeoLiteCityv6-beta/GeoLiteCityv6.csv.gz',
-		src: 'GeoLiteCityv6.csv',
-		dest: 'geoip-city6.dat'
 	}
 ];
 
@@ -91,7 +71,6 @@ function CSVtoArray(text) {
 }
 
 function fetch(database, cb) {
-
 	var downloadUrl = database.url;
 	var fileName = downloadUrl.split('/').pop();
 	var gzip = path.extname(fileName) === '.gz';
@@ -258,178 +237,12 @@ function processCountryData(src, dest, cb) {
 		});
 }
 
-function processCityData(src, dest, cb) {
-	var lines = 0;
-	function processLine(line) {
-		if (line.match(/^Copyright/) || !line.match(/\d/)) {
-			return;
-		}
-
-		var fields = CSVtoArray(line);
-		var sip;
-		var eip;
-		var locId;
-		var b;
-		var bsz;
-
-		var i;
-
-		lines++;
-
-		if (fields[0].match(/:/)) {
-			// IPv6
-			var offset = 0;
-
-			var cc = fields[4];
-			var city = fields[6];
-			var lat = Math.round(parseFloat(fields[7]) * 10000);
-			var lon = Math.round(parseFloat(fields[8]) * 10000);
-			var rg = fields[5];
-
-			bsz = 58;
-			sip = utils.aton6(fields[0]);
-			eip = utils.aton6(fields[1]);
-
-			b = new Buffer(bsz);
-			b.fill(0);
-
-			for (i = 0; i < sip.length; i++) {
-				b.writeUInt32BE(sip[i], offset);
-				offset += 4;
-			}
-
-			for (i = 0; i < eip.length; i++) {
-				b.writeUInt32BE(eip[i], offset);
-				offset += 4;
-			}
-
-			b.write(cc, offset);
-			b.write(rg, offset + 2);
-			b.writeInt32BE(lat, offset + 4);
-			b.writeInt32BE(lon, offset + 8);
-			b.write(city, offset + 12);
-		} else {
-			// IPv4
-			bsz = 12;
-
-			sip = parseInt(fields[0], 10);
-			eip = parseInt(fields[1], 10);
-			locId = parseInt(fields[2], 10);
-
-			b = new Buffer(bsz);
-			b.fill(0);
-			b.writeUInt32BE(sip>>>0, 0);
-			b.writeUInt32BE(eip>>>0, 4);
-			b.writeUInt32BE(locId>>>0, 8);
-		}
-
-		fs.writeSync(datFile, b, 0, b.length, null);
-		if(Date.now() - tstart > 5000) {
-			tstart = Date.now();
-			process.stdout.write('\nStill working (' + lines + ') ...');
-		}
-	}
-
-	var dataFile = path.join(dataPath, dest);
-	var tmpDataFile = path.join(tmpPath, src);
-
-	rimraf(dataFile);
-
-	process.stdout.write('Processing Data (may take a moment) ...');
-	var tstart = Date.now();
-	var datFile = fs.openSync(dataFile, "w");
-
-	lazy(fs.createReadStream(tmpDataFile))
-		.lines
-		.map(function(byteArray) {
-			return iconv.decode(byteArray, 'latin1');
-		})
-		.skip(1)
-		.map(processLine)
-		.on('pipe', cb);
-}
-
-function processCityDataNames(src, dest, cb) {
-	var locId = null;
-
-	function processLine(line, i, a) {
-		if (line.match(/^Copyright/) || !line.match(/\d/)) {
-			return;
-		}
-
-		var b;
-		var sz = 64;
-		var fields = CSVtoArray(line);
-		if (locId === null)
-			locId = parseInt(fields[0]);
-		else {
-			if (parseInt(fields[0]) - 1 > locId) {
-				b = new Buffer(sz);
-				b.fill(0);
-				fs.writeSync(datFile, b, 0, b.length, null);
-			}
-			locId = parseInt(fields[0]);
-		}
-		var cc = fields[1];
-		var rg = fields[2];
-		var city = fields[3];
-		var lat = Math.round(parseFloat(fields[5]) * 10000);
-		var lon = Math.round(parseFloat(fields[6]) * 10000);
-		var metro = parseInt(fields[7]);
-
-		b = new Buffer(sz);
-		b.fill(0);
-		b.write(cc, 0);
-		b.write(rg, 2);
-		b.writeInt32BE(lat, 4);
-		b.writeInt32BE(lon, 8);
-
-		if(metro){
-			b.writeInt32BE(metro, 12);
-		}
-
-		b.write(city, 16);
-
-		fs.writeSync(datFile, b, 0, b.length, null);
-	}
-
-	var dataFile = path.join(dataPath, dest);
-	var tmpDataFile = path.join(tmpPath, src);
-
-	rimraf(dataFile);
-
-	var datFile = fs.openSync(dataFile, "w");
-
-	lazy(fs.createReadStream(tmpDataFile))
-		.lines
-		.map(function(byteArray) {
-			return iconv.decode(byteArray, 'latin1');
-		})
-		.skip(1)
-		.map(processLine)
-		.on('pipe', cb);
-}
-
 function processData(database, cb) {
-	var type = database.type;
 	var src = database.src;
 	var dest = database.dest;
 
-	if (type === 'country') {
-		processCountryData(src, dest, cb);
-	} else if (type === 'city-extended') {
-		processCityData(src[0], dest[0], function() {
-			processCityDataNames(src[1], dest[1], function() {
-				console.log(' DONE'.green);
-				cb();
-			});
-		});
-	} else {
-		processCityData(src, dest, function() {
-			console.log(' DONE'.green);
-			cb();
-		});
-	}
+
+	processCountryData(src, dest, cb);
 }
 
 rimraf(tmpPath);

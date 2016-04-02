@@ -4,9 +4,9 @@ This product includes GeoLite data created by MaxMind, available from http://max
 
 SOFTWARE LICENSE (Node JS library)
 
-The node-geoip JavaScript library is licensed under the Apache License, Version 2.0:
+The node-geoip-country JavaScript library is licensed under the Apache License, Version 2.0:
 
-Copyright 2011 Philip Tellis <philip@bluesmoon.info>
+Copyright 2016 Carlos Rymer
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
